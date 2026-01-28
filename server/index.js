@@ -75,7 +75,7 @@ app.use(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
       );
     },
-    onProxyRes: responseInterceptor(async (buffer, proxyRes) => {
+    onProxyRes: responseInterceptor(async (buffer, _, proxyRes) => {
       const contentType = proxyRes.headers["content-type"] || "";
       if (!contentType.includes("application/json")) {
         return buffer;
@@ -84,7 +84,7 @@ app.use(
       try {
         const payload = JSON.parse(buffer.toString("utf8"));
         const filteredPayload = filterCommodityPayload(payload);
-        return Buffer.from(JSON.stringify(filteredPayload));
+        return JSON.stringify(filteredPayload);
       } catch (error) {
         return buffer;
       }
@@ -108,7 +108,7 @@ app.use(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
       );
     },
-    onProxyRes: responseInterceptor(async (buffer, proxyRes) => {
+    onProxyRes: responseInterceptor(async (buffer, _, proxyRes) => {
       const contentType = proxyRes.headers["content-type"] || "";
       if (!contentType.includes("application/json")) {
         return buffer;
@@ -117,7 +117,7 @@ app.use(
       try {
         const payload = JSON.parse(buffer.toString("utf8"));
         const filteredPayload = filterCommodityPayload(payload);
-        return Buffer.from(JSON.stringify(filteredPayload));
+        return JSON.stringify(filteredPayload);
       } catch (error) {
         return buffer;
       }
