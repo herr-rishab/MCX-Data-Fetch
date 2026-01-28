@@ -1,8 +1,53 @@
 import express from "express";
-import { createProxyMiddleware } from "http-proxy-middleware";
+import { createProxyMiddleware, responseInterceptor } from "http-proxy-middleware";
 
 const app = express();
 const port = process.env.PORT || 8787;
+const allowedCommodities = new Set([
+  "ALUMINI",
+  "COPPER",
+  "CRUDEOIL",
+  "GOLD",
+  "LEAD",
+  "NATURALGAS",
+  "NICKEL",
+  "SILVER",
+  "ZINC",
+]);
+
+const normalizeCommodity = (value) => String(value).trim().toUpperCase().replace(/\s+/g, "");
+
+const entryHasAllowedCommodity = (entry) => {
+  if (!entry || typeof entry !== "object") {
+    return false;
+  }
+
+  return Object.values(entry).some((value) => {
+    if (typeof value !== "string") {
+      return false;
+    }
+    return allowedCommodities.has(normalizeCommodity(value));
+  });
+};
+
+const filterCommodityPayload = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload.filter(entryHasAllowedCommodity);
+  }
+
+  if (!payload || typeof payload !== "object") {
+    return payload;
+  }
+
+  const filtered = { ...payload };
+  Object.entries(filtered).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      filtered[key] = value.filter(entryHasAllowedCommodity);
+    }
+  });
+
+  return filtered;
+};
 
 app.use((_, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -21,6 +66,7 @@ app.use(
     changeOrigin: true,
     pathRewrite: { "^/mcxccl": "" },
     secure: true,
+    selfHandleResponse: true,
     onProxyReq: (proxyReq) => {
       proxyReq.setHeader("origin", "https://www.mcxccl.com");
       proxyReq.setHeader("referer", "https://www.mcxccl.com/risk-management/daily-margin");
@@ -29,6 +75,20 @@ app.use(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
       );
     },
+    onProxyRes: responseInterceptor(async (buffer, _, proxyRes) => {
+      const contentType = proxyRes.headers["content-type"] || "";
+      if (!contentType.includes("application/json")) {
+        return buffer;
+      }
+
+      try {
+        const payload = JSON.parse(buffer.toString("utf8"));
+        const filteredPayload = filterCommodityPayload(payload);
+        return JSON.stringify(filteredPayload);
+      } catch (error) {
+        return buffer;
+      }
+    }),
   })
 );
 
@@ -39,6 +99,7 @@ app.use(
     changeOrigin: true,
     pathRewrite: { "^/mcxindia": "" },
     secure: true,
+    selfHandleResponse: true,
     onProxyReq: (proxyReq) => {
       proxyReq.setHeader("origin", "https://www.mcxindia.com");
       proxyReq.setHeader("referer", "https://www.mcxindia.com/market-data/market-watch");
@@ -47,6 +108,20 @@ app.use(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
       );
     },
+    onProxyRes: responseInterceptor(async (buffer, _, proxyRes) => {
+      const contentType = proxyRes.headers["content-type"] || "";
+      if (!contentType.includes("application/json")) {
+        return buffer;
+      }
+
+      try {
+        const payload = JSON.parse(buffer.toString("utf8"));
+        const filteredPayload = filterCommodityPayload(payload);
+        return JSON.stringify(filteredPayload);
+      } catch (error) {
+        return buffer;
+      }
+    }),
   })
 );
 
